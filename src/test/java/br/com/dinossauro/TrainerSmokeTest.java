@@ -1,0 +1,118 @@
+package br.com.dinossauro;
+
+/** Smoke test executável sem framework: java -ea ... TrainerSmokeTest */
+public final class TrainerSmokeTest {
+    public static void main(String[] args) {
+        NeuralNetwork gradientProbe = new NeuralNetwork(2, 4, 3);
+        double checksumBefore = gradientProbe.parameterChecksum();
+        double loss = gradientProbe.train(new double[]{.25, -.5}, new double[]{1, -.5, .25}, .01);
+        assert loss > 0 : "A perda da rede deveria ser positiva";
+        assert gradientProbe.parameterChecksum() != checksumBefore : "O backpropagation não alterou os pesos";
+
+        Trainer trainer = new Trainer();
+        assert trainer.population.size() == Trainer.POPULATION;
+        double initialParameters = trainer.population.get(0).brain.parameterChecksum();
+        boolean hasVariant = false;
+        for (int i = 1; i < trainer.population.size(); i++)
+            if (trainer.population.get(i).brain.parameterChecksum() != initialParameters) hasVariant = true;
+        assert hasVariant : "A população inicial não possui mutações";
+        Dino probe = trainer.population.get(0);
+        trainer.obstacleType = 0;
+        assert !trainer.canUsePlane(probe, 120) : "O avião não pode ser acionado para cactos";
+        trainer.obstacleType = 1;
+        assert trainer.canUsePlane(probe, 120) : "O avião deveria ser permitido perto do pássaro";
+        assert !trainer.canUsePlane(probe, 300) : "O avião deve ser limitado à janela do obstáculo";
+        probe.planeCooldownTicks = 10;
+        assert !trainer.canUsePlane(probe, 120) : "O avião ignorou o cooldown";
+        probe.planeCooldownTicks = 0;
+        // O painel nunca deve continuar seguindo um dinossauro eliminado só porque ele tem fitness alto.
+        probe.fitness = 100000;
+        probe.alive = false;
+        trainer.tick();
+        assert trainer.champion.alive : "A rede visual continua presa a um indivíduo eliminado";
+        Dino visualChampion = trainer.champion;
+        visualChampion.lastAction = Trainer.RUN;
+        visualChampion.planeTicks = 20;
+        assert trainer.championAction() == Trainer.PLANE : "O painel deve mostrar o avião enquanto está ativo";
+        visualChampion.planeTicks = 0;
+        visualChampion.duckTicks = 12;
+        visualChampion.ducking = true;
+        assert trainer.championAction() == Trainer.DUCK : "O painel deve mostrar o abaixamento enquanto está ativo";
+        visualChampion.duckTicks = 0;
+        visualChampion.ducking = false;
+        visualChampion.y = 25;
+        assert trainer.championAction() == Trainer.JUMP : "O painel deve mostrar o salto enquanto o dino está no ar";
+        visualChampion.y = 0;
+        assert trainer.championAction() == Trainer.RUN : "A ação em repouso deve retornar a correr";
+        visualChampion.fitness = 1000000;
+        visualChampion.planeTicks = 20;
+        visualChampion.planeCooldownTicks = 300;
+        visualChampion.y = 115;
+        visualChampion.displayedDecisionInputs[8] = .2;
+        visualChampion.hasDisplayedDecision = true;
+        trainer.tick();
+        assert trainer.champion == visualChampion : "O campeão vivo não permaneceu selecionado";
+        assert Math.abs(trainer.championInputs()[8] - .2) < 1e-9
+                : "Durante o avião, o painel não preservou a entrada da decisão que iniciou o voo";
+        trainer.obstacleX = probe.x;
+        trainer.obstacleType = 0;
+        trainer.obstacleWidth = 32;
+        trainer.obstacleHeight = 33;
+        probe.y = 0;
+        probe.ducking = false;
+        assert trainer.collidesWithObstacle(probe) : "A colisão frontal não foi detectada";
+        probe.y = 100;
+        assert !trainer.collidesWithObstacle(probe) : "O salto alto deveria escapar do cacto";
+        probe.y = 115;
+        probe.planeTicks = 0;
+        trainer.obstacleCollisionHeight = 33;
+        assert !trainer.collidesWithObstacle(probe) : "A saída do avião não deveria colidir à distância";
+        trainer.obstacleType = 1;
+        trainer.obstacleY = 20;
+        trainer.obstacleHeight = 36;
+        trainer.obstacleCollisionHeight = 36;
+        probe.y = 20;
+        assert trainer.collidesWithObstacle(probe) : "A colisão com o pássaro não foi detectada";
+        trainer.obstacleY = 8;
+        probe.y = 0;
+        probe.ducking = false;
+        probe.planeTicks = 0;
+        assert trainer.collidesWithObstacle(probe) : "O pássaro baixo deveria atingir o dino no chão";
+        probe.y = 100;
+        assert !trainer.collidesWithObstacle(probe) : "O salto deveria evitar o pássaro baixo";
+        trainer.obstacleY = 30;
+        probe.y = 0;
+        probe.ducking = false;
+        assert trainer.collidesWithObstacle(probe) : "O pássaro intermediário deveria atingir o dino em pé";
+        probe.ducking = true;
+        assert !trainer.collidesWithObstacle(probe) : "Abaixar deveria evitar o pássaro intermediário";
+        trainer.obstacleY = 94;
+        probe.ducking = false;
+        assert !trainer.collidesWithObstacle(probe) : "O pássaro alto não deveria atingir o dino no chão";
+        probe.planeTicks = 1;
+        probe.y = 115;
+        assert trainer.collidesWithObstacle(probe) : "O pássaro alto deveria ameaçar o dino voando";
+        probe.planeTicks = 0;
+        trainer.obstacleType = 2;
+        trainer.obstacleX = probe.x;
+        trainer.obstacleWidth = 210;
+        trainer.obstacleHeight = 47;
+        trainer.obstacleCollisionHeight = 115;
+        probe.y = 100;
+        assert trainer.collidesWithObstacle(probe) : "O super cacto deveria bloquear o salto";
+        assert trainer.canUsePlane(probe, 120) : "O super cacto deveria permitir o avião";
+        for (int i = 0; i < 20; i++) trainer.tick();
+        assert trainer.bestHistory.size() >= 4 && trainer.meanHistory.size() >= 4 : "As curvas não recebem amostras durante o treino";
+        for (int i = 0; i < 300; i++) trainer.tick();
+        trainer.population.forEach(dino -> dino.alive = false);
+        trainer.tick();
+        assert trainer.generation > 1 : "A primeira geração não terminou";
+        assert trainer.evolutionUpdates() > 0 : "A evolução não alterou os pesos dos descendentes";
+        assert !trainer.bestHistory.isEmpty() : "O histórico não foi atualizado";
+        trainer.resetTraining();
+        assert trainer.generation == 1 && trainer.distance == 0 && trainer.bestHistory.isEmpty();
+        assert trainer.population.size() == Trainer.POPULATION;
+        assert trainer.population.get(0).brain.parameterChecksum() != 0 : "A política reiniciada não possui parâmetros";
+        System.out.println("Trainer smoke test passed; generation=" + trainer.generation);
+    }
+}
