@@ -46,13 +46,13 @@ A janela é redimensionável. O painel mantém uma área lógica de 1200 × 678 
 
 ## Simulação e mundo
 
-O treinador mantém 1.000 agentes. Cada episódio inicia na velocidade de 5 px por tick, repõe a população e reinicia o roteiro. A velocidade aumenta com a distância até o limite de 12 px por tick. O episódio termina quando todos os agentes colidem. A velocidade de exibição determina quantos ticks são executados por atualização gráfica; ela não muda as regras de um tick.
+O treinador mantém 160 agentes. Cada episódio inicia na velocidade de 5 px por tick, repõe a população e reinicia o roteiro. A velocidade aumenta com a distância até o limite de 12 px por tick. O episódio termina quando todos os agentes colidem. A velocidade de exibição determina quantos ticks são executados por atualização gráfica; ela não muda as regras de um tick.
 
-O roteiro possui 16 posições definidas em código e se repete ciclicamente. Cada posição define tipo, sprite, altura e intervalo livre após o obstáculo. Há cactos simples de vários tamanhos, pássaros baixos, médios e altos e fileiras largas de cactos. A distância entre os pontos de surgimento foi reduzida para 80% da original, aumentando em 25% a frequência; foi aplicado mais um aumento de 10% sobre a frequência atual. O maior vão livre, que era de 1.638 px, foi reduzido em 20% para 1.310 px. Para sequências em que dois obstáculos consecutivos exigem salto, há ao menos 540 px entre seus inícios, dando tempo para aterrissar antes do próximo. O roteiro volta ao mesmo ponto no início de cada episódio. A escolha e os intervalos não usam números aleatórios.
+O roteiro possui 16 posições definidas em código e se repete ciclicamente. Cada posição define tipo, sprite, altura e intervalo livre após o obstáculo. Há cactos simples de vários tamanhos, pássaros baixos, médios e altos e fileiras largas de cactos. Para sequências em que dois obstáculos consecutivos exigem salto, há ao menos 540 px entre seus inícios, dando tempo para aterrissar antes do próximo. O roteiro volta ao mesmo ponto no início de cada episódio. A escolha e os intervalos não usam números aleatórios.
 
-As alturas dos pássaros correspondem às ações permitidas pelo treinador: o pássaro baixo admite salto; o médio admite abaixar; o alto passa acima da caixa de colisão normal do dinossauro. Cactos comuns permitem salto. Fileiras largas usam o comando de avião, ativo por 70 ticks, seguido por recarga de 150 ticks. Mesmo com o espaçamento reduzido, as fileiras largas continuam separadas por pelo menos 1.800 px entre seus inícios, o suficiente para a recarga terminar à velocidade máxima de 12 px/tick. O treinador oferece o comando de avião para as fileiras largas; não oferece salto para esse tipo de obstáculo.
+As alturas dos pássaros correspondem às ações permitidas pelo treinador: o pássaro baixo admite salto; o médio admite abaixar; o alto passa acima da caixa de colisão normal do dinossauro. Cactos comuns permitem salto. Fileiras largas usam o comando de avião, ativo por 70 ticks, seguido por recarga de 150 ticks. Mesmo com o espaçamento reduzido, as fileiras largas continuam separadas por pelo menos 1.310 px entre seus inícios, o suficiente para a recarga terminar à velocidade máxima de 12 px/tick. O treinador oferece o comando de avião para as fileiras largas; não oferece salto para esse tipo de obstáculo.
 
-A população inteira de 1.000 dinossauros aparece desde o início como uma única massa contínua e muito compacta no campo de jogo. Cada agente recebe uma posição X distinta, amostrada uniformemente em uma faixa curta entre x=40 e x=180, com semente fixa; os agentes não são ordenados por posição, e o teste garante que a maior diferença entre vizinhos na ordenação por X seja menor que a largura de um sprite. Assim, os corpos se sobrepõem intensamente, sem ilhas ou vãos entre grupos. Todos começam e são desenhados na mesma altura do chão; não há deslocamento artificial no eixo vertical. O primeiro obstáculo fica em x=960, depois da multidão, e nenhum agente começa atravessando um obstáculo. Essa disposição se repete entre gerações para permitir comparação, enquanto os pesos iniciais das redes continuam aleatórios. O percurso também é determinístico e gera obstáculos adiante do agente mais distante à medida que a simulação avança, evitando que um sobrevivente fique correndo em uma pista vazia. Os 1.000 agentes continuam sendo simulados, inclusive os que morrem e os cujos sprites ficam parcialmente cobertos pela multidão.
+A população inteira de 160 dinossauros aparece desde o início como uma única massa contínua e muito compacta no campo de jogo. Cada agente recebe uma posição X distinta, amostrada uniformemente em uma faixa curta entre x=40 e x=180, com semente fixa; os agentes não são ordenados por posição, e o teste garante que a maior diferença entre vizinhos na ordenação por X seja menor que a largura de um sprite. Assim, os corpos se sobrepõem intensamente, sem ilhas ou vãos entre grupos. Todos começam e são desenhados na mesma altura do chão; não há deslocamento artificial no eixo vertical. O primeiro obstáculo fica em x=960, depois da multidão, e nenhum agente começa atravessando um obstáculo. Essa disposição se repete entre gerações para permitir comparação, enquanto os pesos iniciais das redes continuam aleatórios. O percurso também é determinístico e gera obstáculos adiante do agente mais distante à medida que a simulação avança, evitando que um sobrevivente fique correndo em uma pista vazia. Os agentes continuam sendo simulados, inclusive os que morrem e os cujos sprites ficam parcialmente cobertos pela multidão.
 
 ## Rede neural
 
@@ -60,15 +60,15 @@ A topologia atual é uma MLP totalmente conectada `11–12–4`: onze entradas, 
 
 Cada neurônio calcula a soma ponderada das ativações anteriores mais um viés:
 
-\[
-z_j^{(l)} = b_j^{(l)} + \sum_i w_{ji}^{(l)} a_i^{(l-1)}
-\]
+<div align="center">
+  <img src="https://latex.codecogs.com/svg.image?\dpi{120}&space;\color{white}z_j^{(l)}=b_j^{(l)}+\sum_iw_{ji}^{(l)}a_i^{(l-1)" />
+</div>
 
 Na camada oculta, aplica-se a tangente hiperbólica:
 
-\[
-a_j^{(l)} = \tanh(z_j^{(l)})
-\]
+<div align="center">
+  <img src="https://latex.codecogs.com/svg.image?\dpi{120}&space;\color{white}a_j^{(l)}=\tanh(z_j^{(l)})" />
+</div>
 
 A função `tanh` comprime os valores para o intervalo de −1 a 1. A camada de saída mantém valores lineares. As quatro saídas representam preferência por correr, pular, abaixar ou usar o avião. O treinador escolhe a maior saída entre as ações permitidas para aquele obstáculo e estado físico.
 
